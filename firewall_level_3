@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+
+iptables -F
+iptables -X
+iptables -Z
+
+iptables -P INPUT DROP
+iptables -P FORWARD DROP
+iptables -P OUTPUT DROP
+iptables -t nat -P PREROUTING ACCEPT
+iptables -t nat -P OUTPUT ACCEPT
+iptables -t nat -P POSTROUTING ACCEPT
+
+#iptables -A INPUT -p tcp --syn -j DROP
+iptables -A INPUT -i lo -j ACCEPT
+iptables -A INPUT -i vmnet1 -j ACCEPT
+iptables -A INPUT -i vmnet8 -j ACCEPT
+iptables -A OUTPUT -o lo -j ACCEPT
+iptables -A OUTPUT -o vmnet1 -j ACCEPT
+iptables -A OUTPUT -o vmnet8 -j ACCEPT
+iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+iptables -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+iptables -A OUTPUT -m state --state NEW -p tcp --dport 80 -j ACCEPT
+iptables -A OUTPUT -m state --state NEW -p tcp --dport 2222 -j ACCEPT
+iptables -A OUTPUT -m state --state NEW -p tcp --dport 443 -j ACCEPT
+iptables -A OUTPUT -m state --state NEW -p tcp --dport 465 -j ACCEPT
+iptables -A OUTPUT -m state --state NEW -p tcp --dport 993 -j ACCEPT
+iptables -A OUTPUT -m state --state NEW -p tcp --dport 7706 -j ACCEPT
+iptables -A OUTPUT -m state --state NEW -p udp --dport 57621 -j ACCEPT
+iptables -A OUTPUT -m state --state NEW,ESTABLISHED -p tcp --dport 53 -j ACCEPT
+iptables -A OUTPUT -m state --state NEW,ESTABLISHED -p udp --dport 53 -j ACCEPT
+
+iptables -A INPUT -m pkttype --pkt-type multicast -j ACCEPT
+
+#allow broadcast
+iptables -A INPUT -m pkttype --pkt-type broadcast -d 192.168.0.255/24 -j ACCEPT
+iptables -A FORWARD -m pkttype --pkt-type broadcast -d 192.168.0.255/24 -j ACCEPT
+iptables -A OUTPUT -m pkttype --pkt-type broadcast -d 192.168.0.255/24 -j ACCEPT
+#Logging
+iptables -N LOGGING
+iptables -A INPUT -j LOGGING
+iptables -A OUTPUT -j LOGGING
+iptables -A LOGGING -m limit --limit 1/min -j LOG --log-prefix='[iptablesv4] ' --log-level 5
+iptables -A LOGGING -j DROP
+
+iptables -S
+
+exit 0
